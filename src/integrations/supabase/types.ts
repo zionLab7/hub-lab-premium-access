@@ -30,11 +30,36 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_user_role: {
+        Args: { user_id: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
       verify_credentials: {
         Args: { p_email: string; p_senha: string }
         Returns: {
@@ -43,7 +68,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      user_role: "member" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -158,6 +183,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["member", "admin"],
+    },
   },
 } as const

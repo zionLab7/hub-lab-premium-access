@@ -1,43 +1,29 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  const { signIn, signUp } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loginType, setLoginType] = useState("member");
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   
-  const handleLogin = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !password) {
-      toast({
-        title: "Erro",
-        description: "Por favor, preencha todos os campos.",
-        variant: "destructive",
-      });
       return;
     }
     
-    // Simulate login success
-    toast({
-      title: "Login realizado",
-      description: "Você foi conectado com sucesso.",
-    });
-    
-    // Redirect based on login type
-    if (loginType === "admin") {
-      navigate("/admin");
+    if (mode === "signin") {
+      await signIn(email, password);
     } else {
-      navigate("/member");
+      await signUp(email, password);
     }
   };
   
@@ -56,91 +42,62 @@ const Login = () => {
         
         <Card className="border-none shadow-lg">
           <CardHeader>
-            <CardTitle>Login</CardTitle>
+            <CardTitle>{mode === "signin" ? "Login" : "Criar Conta"}</CardTitle>
             <CardDescription>
-              Entre com suas credenciais para acessar o conteúdo exclusivo
+              {mode === "signin" 
+                ? "Entre com suas credenciais para acessar o conteúdo exclusivo"
+                : "Crie sua conta para acessar o conteúdo exclusivo"}
             </CardDescription>
           </CardHeader>
           
-          <Tabs defaultValue="member" className="w-full" onValueChange={setLoginType}>
-            <div className="px-6">
-              <TabsList className="grid grid-cols-2 w-full">
-                <TabsTrigger value="member">Membro</TabsTrigger>
-                <TabsTrigger value="admin">Admin</TabsTrigger>
-              </TabsList>
-            </div>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="seu.email@exemplo.com" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Senha</Label>
+                  {mode === "signin" && (
+                    <a href="#" className="text-xs text-hublab-blue hover:underline">
+                      Esqueceu a senha?
+                    </a>
+                  )}
+                </div>
+                <Input 
+                  id="password" 
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            </CardContent>
             
-            <TabsContent value="member">
-              <form onSubmit={handleLogin}>
-                <CardContent className="space-y-4 pt-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      placeholder="seu.email@exemplo.com" 
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Senha</Label>
-                      <a href="#" className="text-xs text-hublab-blue hover:underline">
-                        Esqueceu a senha?
-                      </a>
-                    </div>
-                    <Input 
-                      id="password" 
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                  </div>
-                </CardContent>
-                
-                <CardFooter>
-                  <Button type="submit" className="w-full bg-hublab-purple hover:bg-hublab-purple/90">
-                    Entrar como Membro
-                  </Button>
-                </CardFooter>
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="admin">
-              <form onSubmit={handleLogin}>
-                <CardContent className="space-y-4 pt-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="admin-email">Email de Administrador</Label>
-                    <Input 
-                      id="admin-email" 
-                      type="email" 
-                      placeholder="admin@exemplo.com" 
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="admin-password">Senha</Label>
-                    <Input 
-                      id="admin-password" 
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                  </div>
-                </CardContent>
-                
-                <CardFooter>
-                  <Button type="submit" className="w-full">
-                    Entrar como Administrador
-                  </Button>
-                </CardFooter>
-              </form>
-            </TabsContent>
-          </Tabs>
+            <CardFooter className="flex flex-col space-y-4">
+              <Button type="submit" className="w-full bg-hublab-purple hover:bg-hublab-purple/90">
+                {mode === "signin" ? "Entrar" : "Criar Conta"}
+              </Button>
+              
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full"
+                onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+              >
+                {mode === "signin" 
+                  ? "Não tem uma conta? Crie agora"
+                  : "Já tem uma conta? Entre agora"}
+              </Button>
+            </CardFooter>
+          </form>
         </Card>
       </div>
     </div>
