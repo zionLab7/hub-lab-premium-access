@@ -1,8 +1,8 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Search, Edit, Trash, MoreHorizontal, FolderPlus, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { courseService, type Course, type Module, type Lesson } from "@/services/courseService";
 import { 
   Table, 
   TableBody, 
@@ -32,108 +32,99 @@ import { Textarea } from "@/components/ui/textarea";
 import PageHeader from "@/components/PageHeader";
 import { useToast } from "@/hooks/use-toast";
 
-interface Course {
-  id: number;
-  title: string;
-  description: string;
-  lessons: number;
-  category: string;
-}
-
-interface Module {
-  id: number;
-  courseId: number;
-  title: string;
-  lessons: Lesson[];
-}
-
-interface Lesson {
-  id: number;
-  moduleId: number;
-  title: string;
-  duration: string;
-  videoUrl: string;
-}
-
 const AdminCourses = () => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddCourseOpen, setIsAddCourseOpen] = useState(false);
   const [isAddModuleOpen, setIsAddModuleOpen] = useState(false);
   const [isAddLessonOpen, setIsAddLessonOpen] = useState(false);
-  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
-  const [selectedModuleId, setSelectedModuleId] = useState<number | null>(null);
-  
-  // Mock data for courses
-  const [courses, setCourses] = useState<Course[]>([
-    {
-      id: 1,
-      title: "Fundamentos de Chatbots",
-      description: "Aprenda os conceitos básicos para criar chatbots eficientes.",
-      lessons: 12,
-      category: "Chatbots",
-    },
-    {
-      id: 2,
-      title: "Atendimento Humanizado com Chatbots",
-      description: "Torne seu atendimento automatizado mais humano e eficaz.",
-      lessons: 8,
-      category: "Atendimento",
-    },
-    {
-      id: 3,
-      title: "Marketing Conversacional",
-      description: "Estratégias para usar chatbots no seu funil de marketing.",
-      lessons: 10,
-      category: "Marketing",
-    },
-  ]);
-  
-  // Mock data for modules
-  const [modules, setModules] = useState<Module[]>([
-    {
-      id: 1,
-      courseId: 1,
-      title: "Introdução aos Chatbots",
-      lessons: [
-        {
-          id: 101,
-          moduleId: 1,
-          title: "O que são chatbots e como funcionam",
-          duration: "15:30",
-          videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-        },
-        {
-          id: 102,
-          moduleId: 1,
-          title: "História e evolução dos chatbots",
-          duration: "12:45",
-          videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-        },
-      ],
-    },
-    {
-      id: 2,
-      courseId: 1,
-      title: "Construindo seu Primeiro Chatbot",
-      lessons: [
-        {
-          id: 201,
-          moduleId: 2,
-          title: "Planejamento e estratégia",
-          duration: "22:15",
-          videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-        },
-        {
-          id: 202,
-          moduleId: 2,
-          title: "Fluxos de conversação básicos",
-          duration: "25:40",
-          videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-        },
-      ],
-    },
-  ]);
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadCourses();
+  }, []);
+
+  const loadCourses = async () => {
+    setIsLoading(true);
+    const coursesData = await courseService.getCourses();
+    setCourses(coursesData);
+    setIsLoading(false);
+  };
+
+  const handleAddCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    const newCourse = {
+      title: formData.get("title") as string,
+      description: formData.get("description") as string,
+      category: formData.get("category") as string,
+      image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d", // Default image for now
+    };
+    
+    const course = await courseService.createCourse(newCourse);
+    if (course) {
+      setCourses([...courses, course]);
+      setIsAddCourseOpen(false);
+      form.reset();
+    }
+  };
+
+  const handleAddModule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    const newModule = {
+      course_id: selectedCourseId as string,
+      title: formData.get("title") as string,
+    };
+    
+    const module = await courseService.createModule(newModule);
+    if (module) {
+      setModules([...modules, module]);
+      setIsAddModuleOpen(false);
+      form.reset();
+    }
+  };
+
+  const handleAddLesson = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    const newLesson = {
+      module_id: selectedModuleId as string,
+      title: formData.get("title") as string,
+      duration: formData.get("duration") as string,
+      video_url: formData.get("videoUrl") as string,
+    };
+    
+    const lesson = await courseService.createLesson(newLesson);
+    if (lesson) {
+      const updatedModules = modules.map(module => {
+        if (module.id === selectedModuleId) {
+          return {
+            ...module,
+            lessons: [...module.lessons, lesson],
+          };
+        }
+        return module;
+      });
+      
+      setModules(updatedModules);
+      setIsAddLessonOpen(false);
+      form.reset();
+    }
+  };
   
   const filteredCourses = courses.filter(course =>
     course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -141,109 +132,9 @@ const AdminCourses = () => {
     course.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  const handleAddCourse = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const form = e.target as HTMLFormElement;
-    const formData = new FormData(form);
-    
-    const newCourse: Course = {
-      id: courses.length + 1,
-      title: formData.get("title") as string,
-      description: formData.get("description") as string,
-      lessons: 0,
-      category: formData.get("category") as string,
-    };
-    
-    setCourses([...courses, newCourse]);
-    
-    toast({
-      title: "Curso adicionado",
-      description: `O curso "${newCourse.title}" foi adicionado com sucesso.`,
-    });
-    
-    setIsAddCourseOpen(false);
-    form.reset();
-  };
-  
-  const handleAddModule = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const form = e.target as HTMLFormElement;
-    const formData = new FormData(form);
-    
-    const newModule: Module = {
-      id: modules.length + 1,
-      courseId: selectedCourseId as number,
-      title: formData.get("title") as string,
-      lessons: [],
-    };
-    
-    setModules([...modules, newModule]);
-    
-    toast({
-      title: "Módulo adicionado",
-      description: `O módulo "${newModule.title}" foi adicionado com sucesso.`,
-    });
-    
-    setIsAddModuleOpen(false);
-    form.reset();
-  };
-  
-  const handleAddLesson = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const form = e.target as HTMLFormElement;
-    const formData = new FormData(form);
-    
-    const newLesson: Lesson = {
-      id: Math.floor(Math.random() * 1000) + 300,
-      moduleId: selectedModuleId as number,
-      title: formData.get("title") as string,
-      duration: formData.get("duration") as string,
-      videoUrl: formData.get("videoUrl") as string,
-    };
-    
-    const updatedModules = modules.map(module => {
-      if (module.id === selectedModuleId) {
-        return {
-          ...module,
-          lessons: [...module.lessons, newLesson],
-        };
-      }
-      return module;
-    });
-    
-    setModules(updatedModules);
-    
-    // Update course lesson count
-    const moduleInfo = modules.find(m => m.id === selectedModuleId);
-    if (moduleInfo) {
-      const courseId = moduleInfo.courseId;
-      const updatedCourses = courses.map(course => {
-        if (course.id === courseId) {
-          return {
-            ...course,
-            lessons: course.lessons + 1,
-          };
-        }
-        return course;
-      });
-      setCourses(updatedCourses);
-    }
-    
-    toast({
-      title: "Aula adicionada",
-      description: `A aula "${newLesson.title}" foi adicionada com sucesso.`,
-    });
-    
-    setIsAddLessonOpen(false);
-    form.reset();
-  };
-  
-  const handleDeleteCourse = (courseId: number) => {
+  const handleDeleteCourse = (courseId: string) => {
     setCourses(courses.filter(course => course.id !== courseId));
-    setModules(modules.filter(module => module.courseId !== courseId));
+    setModules(modules.filter(module => module.course_id !== courseId));
     
     toast({
       title: "Curso removido",
@@ -251,25 +142,9 @@ const AdminCourses = () => {
     });
   };
   
-  const handleDeleteModule = (moduleId: number) => {
+  const handleDeleteModule = (moduleId: string) => {
     // Find course to update lesson count
     const moduleToDelete = modules.find(m => m.id === moduleId);
-    if (moduleToDelete) {
-      const lessonCount = moduleToDelete.lessons.length;
-      const courseId = moduleToDelete.courseId;
-      
-      // Update course lesson count
-      const updatedCourses = courses.map(course => {
-        if (course.id === courseId) {
-          return {
-            ...course,
-            lessons: Math.max(0, course.lessons - lessonCount),
-          };
-        }
-        return course;
-      });
-      setCourses(updatedCourses);
-    }
     
     setModules(modules.filter(module => module.id !== moduleId));
     
@@ -279,25 +154,7 @@ const AdminCourses = () => {
     });
   };
   
-  const handleDeleteLesson = (moduleId: number, lessonId: number) => {
-    // Find module to get courseId
-    const moduleInfo = modules.find(m => m.id === moduleId);
-    if (moduleInfo) {
-      const courseId = moduleInfo.courseId;
-      
-      // Update course lesson count
-      const updatedCourses = courses.map(course => {
-        if (course.id === courseId) {
-          return {
-            ...course,
-            lessons: Math.max(0, course.lessons - 1),
-          };
-        }
-        return course;
-      });
-      setCourses(updatedCourses);
-    }
-    
+  const handleDeleteLesson = (moduleId: string, lessonId: string) => {
     // Update module lessons
     const updatedModules = modules.map(module => {
       if (module.id === moduleId) {
@@ -470,7 +327,7 @@ const AdminCourses = () => {
                       id="courseId" 
                       name="courseId"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
-                      onChange={(e) => setSelectedCourseId(Number(e.target.value))}
+                      onChange={(e) => setSelectedCourseId(e.target.value)}
                       required
                     >
                       <option value="">Selecione um curso</option>
@@ -517,7 +374,7 @@ const AdminCourses = () => {
                   </TableRow>
                 ) : (
                   modules.map((module) => {
-                    const course = courses.find(c => c.id === module.courseId);
+                    const course = courses.find(c => c.id === module.course_id);
                     return (
                       <TableRow key={module.id}>
                         <TableCell className="font-medium">{module.title}</TableCell>
@@ -597,7 +454,7 @@ const AdminCourses = () => {
         
         <TabsContent value="lessons">
           {modules.map((module) => {
-            const course = courses.find(c => c.id === module.courseId);
+            const course = courses.find(c => c.id === module.course_id);
             
             return (
               <div key={module.id} className="mb-8">
@@ -632,12 +489,12 @@ const AdminCourses = () => {
                             <TableCell>{lesson.duration}</TableCell>
                             <TableCell className="hidden md:table-cell truncate max-w-md">
                               <a 
-                                href={lesson.videoUrl} 
+                                href={lesson.video_url} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="text-blue-500 hover:underline"
                               >
-                                {lesson.videoUrl}
+                                {lesson.video_url}
                               </a>
                             </TableCell>
                             <TableCell>

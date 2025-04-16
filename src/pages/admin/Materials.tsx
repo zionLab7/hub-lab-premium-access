@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Plus, MoreHorizontal, Edit, Trash, FileText, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,15 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import PageHeader from "@/components/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-
-interface Material {
-  id: number;
-  title: string;
-  description: string;
-  category: string;
-  downloadUrl: string;
-  type: string;
-}
+import { materialService, type Material } from "@/services/materialService";
 
 const AdminMaterials = () => {
   const { toast } = useToast();
@@ -49,63 +40,49 @@ const AdminMaterials = () => {
   const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false);
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [newCategory, setNewCategory] = useState("");
-  
-  // Mock data for materials
-  const [materials, setMaterials] = useState<Material[]>([
-    {
-      id: 1,
-      title: "Guia Completo de Chatbots",
-      description: "Um guia abrangente sobre chatbots, desde conceitos básicos até técnicas avançadas.",
-      category: "Chatbots",
-      downloadUrl: "https://example.com/guia-chatbots.pdf",
-      type: "PDF",
-    },
-    {
-      id: 2,
-      title: "Templates de Fluxos para WhatsApp",
-      description: "Templates prontos para diferentes cenários de atendimento no WhatsApp.",
-      category: "WhatsApp",
-      downloadUrl: "https://example.com/templates-whatsapp.zip",
-      type: "ZIP",
-    },
-    {
-      id: 3,
-      title: "Planilha de Métricas para Chatbots",
-      description: "Planilha para acompanhar e analisar as métricas do seu chatbot.",
-      category: "Métricas",
-      downloadUrl: "https://example.com/metricas-chatbots.xlsx",
-      type: "XLSX",
-    },
-    {
-      id: 4,
-      title: "Manual de Marketing Conversacional",
-      description: "Estratégias e táticas para usar chatbots em marketing conversacional.",
-      category: "Marketing",
-      downloadUrl: "https://example.com/marketing-conversacional.pdf",
-      type: "PDF",
-    },
-    {
-      id: 5,
-      title: "Checklist para Lançamento de Chatbot",
-      description: "Lista de verificação para garantir o sucesso do lançamento do seu chatbot.",
-      category: "Chatbots",
-      downloadUrl: "https://example.com/checklist-lancamento.pdf",
-      type: "PDF",
-    },
-    {
-      id: 6,
-      title: "Guia de Integração com APIs",
-      description: "Guia técnico sobre como integrar seu chatbot com diferentes APIs.",
-      category: "Técnico",
-      downloadUrl: "https://example.com/integracao-apis.pdf",
-      type: "PDF",
-    },
-  ]);
-  
-  // Get unique categories
-  const [categories, setCategories] = useState<string[]>(
-    Array.from(new Set(materials.map(material => material.category)))
-  );
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadMaterials();
+  }, []);
+
+  const loadMaterials = async () => {
+    setIsLoading(true);
+    const materialsData = await materialService.getMaterials();
+    setMaterials(materialsData);
+    setIsLoading(false);
+  };
+
+  const handleAddMaterial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+    
+    const newMaterial = {
+      title: formData.get("title") as string,
+      description: formData.get("description") as string,
+      category: formData.get("category") as string,
+      type: formData.get("type") as string,
+      download_url: formData.get("downloadUrl") as string,
+    };
+    
+    const material = await materialService.createMaterial(newMaterial);
+    if (material) {
+      setMaterials([...materials, material]);
+      setIsAddMaterialOpen(false);
+      form.reset();
+    }
+  };
+
+  const handleDeleteMaterial = async (id: string) => {
+    const success = await materialService.deleteMaterial(id);
+    if (success) {
+      setMaterials(materials.filter(material => material.id !== id));
+    }
+  };
   
   const filteredMaterials = materials.filter(material => {
     const matchesSearch = 
@@ -116,37 +93,6 @@ const AdminMaterials = () => {
     
     return matchesSearch && matchesCategory;
   });
-  
-  const handleAddMaterial = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const form = e.target as HTMLFormElement;
-    const formData = new FormData(form);
-    
-    const categoryValue = formData.get("category") as string;
-    if (!categories.includes(categoryValue) && categoryValue.trim() !== "") {
-      setCategories([...categories, categoryValue]);
-    }
-    
-    const newMaterial: Material = {
-      id: Math.floor(Math.random() * 1000) + 10,
-      title: formData.get("title") as string,
-      description: formData.get("description") as string,
-      category: categoryValue,
-      downloadUrl: formData.get("downloadUrl") as string,
-      type: formData.get("type") as string,
-    };
-    
-    setMaterials([...materials, newMaterial]);
-    
-    toast({
-      title: "Material adicionado",
-      description: `"${newMaterial.title}" foi adicionado com sucesso.`,
-    });
-    
-    setIsAddMaterialOpen(false);
-    form.reset();
-  };
   
   const handleAddCategory = (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,15 +114,6 @@ const AdminMaterials = () => {
         variant: "destructive",
       });
     }
-  };
-  
-  const handleDeleteMaterial = (materialId: number) => {
-    setMaterials(materials.filter(material => material.id !== materialId));
-    
-    toast({
-      title: "Material removido",
-      description: "O material foi removido com sucesso.",
-    });
   };
   
   const handleDeleteCategory = (category: string) => {
@@ -381,12 +318,12 @@ const AdminMaterials = () => {
                   </TableCell>
                   <TableCell className="hidden md:table-cell truncate max-w-xs">
                     <a 
-                      href={material.downloadUrl} 
+                      href={material.download_url} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:underline"
                     >
-                      {material.downloadUrl}
+                      {material.download_url}
                     </a>
                   </TableCell>
                   <TableCell>
