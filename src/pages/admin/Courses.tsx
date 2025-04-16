@@ -269,7 +269,7 @@ const AdminCourses = () => {
                       <TableCell className="hidden md:table-cell max-w-md truncate">
                         {course.description}
                       </TableCell>
-                      <TableCell>{course.lessons}</TableCell>
+                      <TableCell>{course.lessons || 0}</TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
