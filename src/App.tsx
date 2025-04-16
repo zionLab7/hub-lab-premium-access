@@ -1,10 +1,24 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import MemberLayout from "./layouts/MemberLayout";
+import AdminLayout from "./layouts/AdminLayout";
+import MemberDashboard from "./pages/member/Dashboard";
+import Courses from "./pages/member/Courses";
+import CourseDetail from "./pages/member/CourseDetail";
+import Lives from "./pages/member/Lives";
+import Materials from "./pages/member/Materials";
+import ChatbotBuilder from "./pages/member/ChatbotBuilder";
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminCourses from "./pages/admin/Courses";
+import AdminLives from "./pages/admin/Lives";
+import AdminMaterials from "./pages/admin/Materials";
+import AdminChatbotBuilder from "./pages/admin/ChatbotBuilder";
 
 const queryClient = new QueryClient();
 
@@ -15,8 +29,28 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/login" element={<Login />} />
+          
+          {/* Member Routes */}
+          <Route path="/member" element={<MemberLayout />}>
+            <Route index element={<MemberDashboard />} />
+            <Route path="courses" element={<Courses />} />
+            <Route path="courses/:id" element={<CourseDetail />} />
+            <Route path="lives" element={<Lives />} />
+            <Route path="materials" element={<Materials />} />
+            <Route path="chatbot-builder" element={<ChatbotBuilder />} />
+          </Route>
+          
+          {/* Admin Routes */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="courses" element={<AdminCourses />} />
+            <Route path="lives" element={<AdminLives />} />
+            <Route path="materials" element={<AdminMaterials />} />
+            <Route path="chatbot-builder" element={<AdminChatbotBuilder />} />
+          </Route>
+          
+          <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
