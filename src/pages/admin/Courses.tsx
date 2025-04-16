@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Plus, Search, Edit, Trash, MoreHorizontal, FolderPlus, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -278,11 +279,17 @@ const AdminCourses = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DialogTrigger asChild>
-                              <DropdownMenuItem onSelect={() => setSelectedCourseId(course.id)}>
-                                <FolderPlus className="mr-2 h-4 w-4" /> Adicionar Módulo
-                              </DropdownMenuItem>
-                            </DialogTrigger>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <DropdownMenuItem onSelect={(e) => {
+                                  e.preventDefault();
+                                  setSelectedCourseId(course.id);
+                                  setIsAddModuleOpen(true);
+                                }}>
+                                  <FolderPlus className="mr-2 h-4 w-4" /> Adicionar Módulo
+                                </DropdownMenuItem>
+                              </DialogTrigger>
+                            </Dialog>
                             <DropdownMenuItem>
                               <Edit className="mr-2 h-4 w-4" /> Editar Curso
                             </DropdownMenuItem>
