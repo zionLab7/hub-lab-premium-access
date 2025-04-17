@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Search, Calendar, Play, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,18 +23,25 @@ const Lives = () => {
     setIsLoading(true);
     try {
       const livesData = await liveService.getLives();
-      setLives(livesData);
+      if (livesData && livesData.length > 0) {
+        setLives(livesData as Live[]);
+      } else {
+        // If no lives data from backend, use mock data
+        setLives(mockLives);
+      }
     } catch (error) {
       console.error("Error fetching lives:", error);
       toast.error("Erro ao carregar lives", {
         description: "Ocorreu um erro ao buscar as lives. Tente novamente mais tarde."
       });
+      // Use mock data on error
+      setLives(mockLives);
     } finally {
       setIsLoading(false);
     }
   };
   
-  // If no lives data from backend, use mock data
+  // Mock data for lives
   const mockLives: Live[] = [
     {
       id: "1",
@@ -83,10 +89,8 @@ const Lives = () => {
     },
   ];
   
-  // Use data from backend if available, otherwise use mock data
-  const displayLives = lives.length > 0 ? lives : mockLives;
-  
-  const filteredLives = (isPast: boolean) => displayLives
+  // Use data from backend if available, otherwise already set in useEffect
+  const filteredLives = (isPast: boolean) => lives
     .filter(live => live.is_past === isPast)
     .filter(live => 
       live.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

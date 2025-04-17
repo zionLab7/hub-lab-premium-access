@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Search, FileText, Download, Filter } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
-import { supabase } from "@/integrations/supabase/client";
+import { materialService, type Material } from "@/services/materialService";
 import { toast } from "sonner";
 
 interface Material {
@@ -40,17 +39,12 @@ const Materials = () => {
   const fetchMaterials = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('materials')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const materialsData = await materialService.getMaterials();
       
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        setMaterials(data);
+      if (materialsData && materialsData.length > 0) {
+        setMaterials(materialsData);
         // Extract unique categories
-        const uniqueCategories = Array.from(new Set(data.map(material => material.category)));
+        const uniqueCategories = Array.from(new Set(materialsData.map(material => material.category)));
         setCategories(uniqueCategories);
       } else {
         // Use mock data if no materials in the database

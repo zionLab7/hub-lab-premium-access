@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ChevronLeft, Play, CheckCircle, Circle, Download, Lock } from "lucide-react";
@@ -113,8 +112,7 @@ const CourseDetail = () => {
             return {
               ...lesson,
               completed: isCompleted,
-              locked: isLocked,
-              videoUrl: lesson.video_url, // Map from backend field to frontend field
+              locked: isLocked
             };
           })
         };
@@ -163,7 +161,7 @@ const CourseDetail = () => {
       if (!activeVideo && processedModules.length > 0 && processedModules[0].lessons.length > 0) {
         const firstLesson = processedModules[0].lessons[0];
         if (!firstLesson.locked) {
-          setActiveVideo(firstLesson.videoUrl);
+          setActiveVideo(firstLesson.video_url);
         }
       }
     } catch (error) {
@@ -178,7 +176,7 @@ const CourseDetail = () => {
   
   const handleLessonClick = (lesson: Lesson) => {
     if (!lesson.locked) {
-      setActiveVideo(lesson.videoUrl);
+      setActiveVideo(lesson.video_url);
     }
   };
   

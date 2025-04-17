@@ -16,36 +16,54 @@ export interface Live {
 
 export const liveService = {
   async getLives() {
-    const { data, error } = await supabase
-      .from('lives')
-      .select('*')
-      .order('date', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('lives')
+        .select('*')
+        .order('date', { ascending: true });
 
-    if (error) {
-      toast.error("Erro ao carregar lives", {
-        description: error.message
-      });
+      if (error) {
+        toast.error("Erro ao carregar lives", {
+          description: error.message
+        });
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Error in getLives:", error);
       return [];
     }
-
-    return data || [];
   },
 
-  async createLive(live: Omit<Live, 'id' | 'created_at'>) {
-    const { data, error } = await supabase
-      .from('lives')
-      .insert(live)
-      .select()
-      .single();
+  async createLive(liveData: Omit<Live, 'id' | 'created_at'>) {
+    try {
+      const { data, error } = await supabase
+        .from('lives')
+        .insert({
+          title: liveData.title,
+          description: liveData.description,
+          date: liveData.date,
+          time: liveData.time,
+          image: liveData.image,
+          link: liveData.link,
+          is_past: liveData.is_past
+        })
+        .select()
+        .single();
 
-    if (error) {
-      toast.error("Erro ao criar live", {
-        description: error.message
-      });
+      if (error) {
+        toast.error("Erro ao criar live", {
+          description: error.message
+        });
+        return null;
+      }
+
+      toast.success("Live criada com sucesso!");
+      return data;
+    } catch (error) {
+      console.error("Error in createLive:", error);
       return null;
     }
-
-    toast.success("Live criada com sucesso!");
-    return data;
   }
 };
