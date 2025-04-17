@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, FileText, Download, Filter } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,72 +13,123 @@ import {
 } from "@/components/ui/dropdown-menu";
 import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Material {
-  id: number;
+  id: string;
   title: string;
   description: string;
   category: string;
-  downloadUrl: string;
+  download_url: string;
   type: string;
+  created_at: string;
 }
 
 const Materials = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
-  const materials: Material[] = [
-    {
-      id: 1,
-      title: "Guia Completo de Chatbots",
-      description: "Um guia abrangente sobre chatbots, desde conceitos básicos até técnicas avançadas.",
-      category: "Chatbots",
-      downloadUrl: "#",
-      type: "PDF",
-    },
-    {
-      id: 2,
-      title: "Templates de Fluxos para WhatsApp",
-      description: "Templates prontos para diferentes cenários de atendimento no WhatsApp.",
-      category: "WhatsApp",
-      downloadUrl: "#",
-      type: "ZIP",
-    },
-    {
-      id: 3,
-      title: "Planilha de Métricas para Chatbots",
-      description: "Planilha para acompanhar e analisar as métricas do seu chatbot.",
-      category: "Métricas",
-      downloadUrl: "#",
-      type: "XLSX",
-    },
-    {
-      id: 4,
-      title: "Manual de Marketing Conversacional",
-      description: "Estratégias e táticas para usar chatbots em marketing conversacional.",
-      category: "Marketing",
-      downloadUrl: "#",
-      type: "PDF",
-    },
-    {
-      id: 5,
-      title: "Checklist para Lançamento de Chatbot",
-      description: "Lista de verificação para garantir o sucesso do lançamento do seu chatbot.",
-      category: "Chatbots",
-      downloadUrl: "#",
-      type: "PDF",
-    },
-    {
-      id: 6,
-      title: "Guia de Integração com APIs",
-      description: "Guia técnico sobre como integrar seu chatbot com diferentes APIs.",
-      category: "Técnico",
-      downloadUrl: "#",
-      type: "PDF",
-    },
-  ];
+  useEffect(() => {
+    fetchMaterials();
+  }, []);
   
-  const categories = Array.from(new Set(materials.map(material => material.category)));
+  const fetchMaterials = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('materials')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setMaterials(data);
+        // Extract unique categories
+        const uniqueCategories = Array.from(new Set(data.map(material => material.category)));
+        setCategories(uniqueCategories);
+      } else {
+        // Use mock data if no materials in the database
+        useMockData();
+      }
+    } catch (error) {
+      console.error("Error fetching materials:", error);
+      toast.error("Erro ao carregar materiais", {
+        description: "Ocorreu um erro ao buscar os materiais. Tente novamente mais tarde."
+      });
+      // Use mock data on error
+      useMockData();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const useMockData = () => {
+    const mockMaterials: Material[] = [
+      {
+        id: "1",
+        title: "Guia Completo de Chatbots",
+        description: "Um guia abrangente sobre chatbots, desde conceitos básicos até técnicas avançadas.",
+        category: "Chatbots",
+        download_url: "#",
+        type: "PDF",
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: "2",
+        title: "Templates de Fluxos para WhatsApp",
+        description: "Templates prontos para diferentes cenários de atendimento no WhatsApp.",
+        category: "WhatsApp",
+        download_url: "#",
+        type: "ZIP",
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: "3",
+        title: "Planilha de Métricas para Chatbots",
+        description: "Planilha para acompanhar e analisar as métricas do seu chatbot.",
+        category: "Métricas",
+        download_url: "#",
+        type: "XLSX",
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: "4",
+        title: "Manual de Marketing Conversacional",
+        description: "Estratégias e táticas para usar chatbots em marketing conversacional.",
+        category: "Marketing",
+        download_url: "#",
+        type: "PDF",
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: "5",
+        title: "Checklist para Lançamento de Chatbot",
+        description: "Lista de verificação para garantir o sucesso do lançamento do seu chatbot.",
+        category: "Chatbots",
+        download_url: "#",
+        type: "PDF",
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: "6",
+        title: "Guia de Integração com APIs",
+        description: "Guia técnico sobre como integrar seu chatbot com diferentes APIs.",
+        category: "Técnico",
+        download_url: "#",
+        type: "PDF",
+        created_at: new Date().toISOString(),
+      },
+    ];
+    
+    setMaterials(mockMaterials);
+    const mockCategories = Array.from(new Set(mockMaterials.map(material => material.category)));
+    setCategories(mockCategories);
+  };
   
   const filteredMaterials = materials.filter(material => {
     const matchesSearch = 
@@ -136,7 +187,11 @@ const Materials = () => {
         </div>
       </PageHeader>
       
-      {filteredMaterials.length === 0 ? (
+      {isLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <p className="text-muted-foreground">Carregando materiais...</p>
+        </div>
+      ) : filteredMaterials.length === 0 ? (
         <EmptyState 
           icon={<FileText className="h-8 w-8 text-muted-foreground" />}
           title="Nenhum material encontrado"
@@ -167,7 +222,7 @@ const Materials = () => {
               </CardHeader>
               <CardFooter className="px-4 pt-4 pb-4">
                 <Button asChild className="w-full gap-2">
-                  <a href={material.downloadUrl} download>
+                  <a href={material.download_url} download>
                     <Download className="h-4 w-4" />
                     Download
                   </a>

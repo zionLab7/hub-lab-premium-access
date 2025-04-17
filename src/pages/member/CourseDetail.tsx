@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ChevronLeft, Play, CheckCircle, Circle, Download, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,18 +7,21 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Card, CardContent } from "@/components/ui/card";
+import { courseService } from "@/services/courseService";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Lesson {
-  id: number;
+  id: string;
   title: string;
   duration: string;
-  completed: boolean;
-  locked: boolean;
-  videoUrl: string;
+  completed?: boolean;
+  locked?: boolean;
+  video_url: string;
 }
 
 interface Module {
-  id: number;
+  id: string;
   title: string;
   lessons: Lesson[];
 }
@@ -30,128 +33,183 @@ interface Material {
   downloadUrl: string;
 }
 
+interface CourseDetailsType {
+  id: string;
+  title: string;
+  description: string;
+  progress: number;
+  instructor: string;
+  category: string;
+  image: string;
+  modules: Module[];
+  materials: Material[];
+}
+
 const CourseDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [activeVideo, setActiveVideo] = useState<string>("");
+  const [courseDetails, setCourseDetails] = useState<CourseDetailsType | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [completedLessons, setCompletedLessons] = useState(0);
+  const [totalLessons, setTotalLessons] = useState(0);
   
-  // Mock data - this would come from an API in a real application
-  const courseDetails = {
-    id: Number(id),
-    title: "Fundamentos de Chatbots",
-    description: "Aprenda os conceitos básicos para criar chatbots eficientes e como aplicá-los em diferentes plataformas. Este curso cobre desde a teoria básica até implementações práticas.",
-    progress: 80,
-    instructor: "Alex Silva",
-    category: "Chatbots",
-    image: "https://images.unsplash.com/photo-1531297484001-80022131f5a1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80",
-    modules: [
-      {
-        id: 1,
-        title: "Introdução aos Chatbots",
-        lessons: [
-          {
-            id: 101,
-            title: "O que são chatbots e como funcionam",
-            duration: "15:30",
-            completed: true,
-            locked: false,
-            videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-          },
-          {
-            id: 102,
-            title: "História e evolução dos chatbots",
-            duration: "12:45",
-            completed: true,
-            locked: false,
-            videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-          },
-          {
-            id: 103,
-            title: "Tipos de chatbots no mercado",
-            duration: "18:20",
-            completed: true,
-            locked: false,
-            videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-          },
-        ],
-      },
-      {
-        id: 2,
-        title: "Construindo seu Primeiro Chatbot",
-        lessons: [
-          {
-            id: 201,
-            title: "Planejamento e estratégia",
-            duration: "22:15",
-            completed: true,
-            locked: false,
-            videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-          },
-          {
-            id: 202,
-            title: "Fluxos de conversação básicos",
-            duration: "25:40",
-            completed: true,
-            locked: false,
-            videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-          },
-          {
-            id: 203,
-            title: "Implementação prática",
-            duration: "30:10",
-            completed: false,
-            locked: false,
-            videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-          },
-          {
-            id: 204,
-            title: "Testes e otimização",
-            duration: "20:30",
-            completed: false,
-            locked: true,
-            videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-          },
-        ],
-      },
-    ],
-    materials: [
-      {
-        id: 1,
-        title: "Guia de Boas Práticas",
-        description: "Manual com as melhores práticas para chatbots eficientes",
-        downloadUrl: "#",
-      },
-      {
-        id: 2,
-        title: "Templates de Fluxos",
-        description: "Templates prontos para diferentes tipos de chatbots",
-        downloadUrl: "#",
-      },
-      {
-        id: 3,
-        title: "Checklist de Implementação",
-        description: "Lista de verificação para garantir a qualidade do seu chatbot",
-        downloadUrl: "#",
-      },
-    ],
+  useEffect(() => {
+    if (!id) return;
+    fetchCourseDetails(id);
+  }, [id]);
+  
+  const fetchCourseDetails = async (courseId: string) => {
+    setIsLoading(true);
+    try {
+      // Fetch course details
+      const { data: courseData, error: courseError } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('id', courseId)
+        .single();
+      
+      if (courseError) throw courseError;
+      
+      // Fetch modules and lessons
+      const modules = await courseService.getModules(courseId);
+      
+      // Calculate total lessons
+      const lessonsCount = modules.reduce((total, module) => {
+        return total + module.lessons.length;
+      }, 0);
+      
+      // Fetch user progress
+      const { data: progressData } = await supabase
+        .from('user_progress')
+        .select('progress')
+        .eq('course_id', courseId)
+        .maybeSingle();
+      
+      // Mark lessons as completed or locked based on progress
+      let completedCount = 0;
+      const processedModules = modules.map((module, moduleIndex) => {
+        return {
+          ...module,
+          lessons: module.lessons.map((lesson, lessonIndex) => {
+            // Calculate overall lesson index
+            let overallIndex = 0;
+            for (let i = 0; i < moduleIndex; i++) {
+              overallIndex += modules[i].lessons.length;
+            }
+            overallIndex += lessonIndex;
+            
+            // Calculate if lesson should be completed based on progress
+            const lessonThreshold = Math.floor((progressData?.progress || 0) / 100 * lessonsCount);
+            const isCompleted = overallIndex < lessonThreshold;
+            
+            // Mark lessons as locked if previous lesson is not completed
+            // First lesson is never locked
+            const isLocked = overallIndex > 0 && 
+              overallIndex > lessonThreshold &&
+              !modules[moduleIndex].lessons[lessonIndex - 1]?.completed;
+            
+            if (isCompleted) completedCount++;
+            
+            return {
+              ...lesson,
+              completed: isCompleted,
+              locked: isLocked,
+              videoUrl: lesson.video_url, // Map from backend field to frontend field
+            };
+          })
+        };
+      });
+      
+      // Mock materials data for now
+      const materials = [
+        {
+          id: 1,
+          title: "Guia de Boas Práticas",
+          description: "Manual com as melhores práticas para chatbots eficientes",
+          downloadUrl: "#",
+        },
+        {
+          id: 2,
+          title: "Templates de Fluxos",
+          description: "Templates prontos para diferentes tipos de chatbots",
+          downloadUrl: "#",
+        },
+        {
+          id: 3,
+          title: "Checklist de Implementação",
+          description: "Lista de verificação para garantir a qualidade do seu chatbot",
+          downloadUrl: "#",
+        },
+      ];
+      
+      // Construct course details object
+      const courseDetails: CourseDetailsType = {
+        id: courseData.id,
+        title: courseData.title,
+        description: courseData.description,
+        progress: progressData?.progress || 0,
+        instructor: "Alex Silva", // Hardcoded for now
+        category: courseData.category,
+        image: courseData.image,
+        modules: processedModules,
+        materials: materials,
+      };
+      
+      setCourseDetails(courseDetails);
+      setTotalLessons(lessonsCount);
+      setCompletedLessons(completedCount);
+      
+      // Set active video to first unlocked lesson if none is selected
+      if (!activeVideo && processedModules.length > 0 && processedModules[0].lessons.length > 0) {
+        const firstLesson = processedModules[0].lessons[0];
+        if (!firstLesson.locked) {
+          setActiveVideo(firstLesson.videoUrl);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching course details:", error);
+      toast.error("Erro ao carregar detalhes do curso", {
+        description: "Ocorreu um erro ao buscar os detalhes do curso. Tente novamente mais tarde."
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
-  
-  // Calculate total lessons and completed lessons
-  const totalLessons = courseDetails.modules.reduce(
-    (total, module) => total + module.lessons.length, 
-    0
-  );
-  
-  const completedLessons = courseDetails.modules.reduce(
-    (total, module) => 
-      total + module.lessons.filter(lesson => lesson.completed).length, 
-    0
-  );
   
   const handleLessonClick = (lesson: Lesson) => {
     if (!lesson.locked) {
       setActiveVideo(lesson.videoUrl);
     }
   };
+  
+  if (isLoading) {
+    return (
+      <div className="animate-fade-in flex items-center justify-center min-h-[50vh]">
+        <p className="text-muted-foreground">Carregando curso...</p>
+      </div>
+    );
+  }
+  
+  if (!courseDetails) {
+    return (
+      <div className="animate-fade-in space-y-6">
+        <div className="flex items-center gap-2 mb-6">
+          <Button asChild variant="ghost" size="sm" className="gap-1">
+            <Link to="/member/courses">
+              <ChevronLeft className="h-4 w-4" /> Voltar aos cursos
+            </Link>
+          </Button>
+        </div>
+        <div className="flex flex-col items-center justify-center py-12">
+          <h2 className="text-xl font-semibold mb-2">Curso não encontrado</h2>
+          <p className="text-muted-foreground mb-4">O curso que você está procurando não existe ou foi removido.</p>
+          <Button asChild>
+            <Link to="/member/courses">Ver todos os cursos</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="animate-fade-in space-y-6">
