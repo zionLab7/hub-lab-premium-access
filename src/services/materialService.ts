@@ -61,5 +61,27 @@ export const materialService = {
       console.error("Error in createMaterial:", error);
       return null;
     }
+  },
+
+  async deleteMaterial(id: string) {
+    try {
+      const { error } = await supabase
+        .from('materials')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        toast.error("Erro ao remover material", {
+          description: error.message
+        });
+        return false;
+      }
+
+      toast.success("Material removido com sucesso!");
+      return true;
+    } catch (error) {
+      console.error("Error in deleteMaterial:", error);
+      return false;
+    }
   }
 };

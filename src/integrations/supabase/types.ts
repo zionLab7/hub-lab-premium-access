@@ -98,6 +98,45 @@ export type Database = {
           },
         ]
       }
+      lives: {
+        Row: {
+          created_at: string
+          date: string
+          description: string
+          id: string
+          image: string
+          is_past: boolean
+          link: string
+          time: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          description: string
+          id?: string
+          image: string
+          is_past?: boolean
+          link: string
+          time: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          image?: string
+          is_past?: boolean
+          link?: string
+          time?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       materials: {
         Row: {
           category: string

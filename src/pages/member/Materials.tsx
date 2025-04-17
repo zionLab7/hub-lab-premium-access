@@ -12,23 +12,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
-import { materialService, type Material } from "@/services/materialService";
+import { materialService, type Material as MaterialType } from "@/services/materialService";
 import { toast } from "sonner";
-
-interface Material {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  download_url: string;
-  type: string;
-  created_at: string;
-}
 
 const Materials = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [materials, setMaterials] = useState<Material[]>([]);
+  const [materials, setMaterials] = useState<MaterialType[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -63,7 +53,7 @@ const Materials = () => {
   };
   
   const useMockData = () => {
-    const mockMaterials: Material[] = [
+    const mockMaterials: MaterialType[] = [
       {
         id: "1",
         title: "Guia Completo de Chatbots",

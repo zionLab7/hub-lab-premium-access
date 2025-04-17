@@ -14,9 +14,9 @@ interface Lesson {
   id: string;
   title: string;
   duration: string;
+  video_url: string;
   completed?: boolean;
   locked?: boolean;
-  video_url: string;
 }
 
 interface Module {
@@ -60,7 +60,6 @@ const CourseDetail = () => {
   const fetchCourseDetails = async (courseId: string) => {
     setIsLoading(true);
     try {
-      // Fetch course details
       const { data: courseData, error: courseError } = await supabase
         .from('courses')
         .select('*')
@@ -69,43 +68,34 @@ const CourseDetail = () => {
       
       if (courseError) throw courseError;
       
-      // Fetch modules and lessons
       const modules = await courseService.getModules(courseId);
       
-      // Calculate total lessons
       const lessonsCount = modules.reduce((total, module) => {
         return total + module.lessons.length;
       }, 0);
       
-      // Fetch user progress
       const { data: progressData } = await supabase
         .from('user_progress')
         .select('progress')
         .eq('course_id', courseId)
         .maybeSingle();
       
-      // Mark lessons as completed or locked based on progress
       let completedCount = 0;
       const processedModules = modules.map((module, moduleIndex) => {
         return {
           ...module,
           lessons: module.lessons.map((lesson, lessonIndex) => {
-            // Calculate overall lesson index
             let overallIndex = 0;
             for (let i = 0; i < moduleIndex; i++) {
               overallIndex += modules[i].lessons.length;
             }
             overallIndex += lessonIndex;
             
-            // Calculate if lesson should be completed based on progress
             const lessonThreshold = Math.floor((progressData?.progress || 0) / 100 * lessonsCount);
             const isCompleted = overallIndex < lessonThreshold;
             
-            // Mark lessons as locked if previous lesson is not completed
-            // First lesson is never locked
             const isLocked = overallIndex > 0 && 
-              overallIndex > lessonThreshold &&
-              !modules[moduleIndex].lessons[lessonIndex - 1]?.completed;
+              overallIndex > lessonThreshold;
             
             if (isCompleted) completedCount++;
             
@@ -113,12 +103,11 @@ const CourseDetail = () => {
               ...lesson,
               completed: isCompleted,
               locked: isLocked
-            };
+            } as Lesson;
           })
         };
       });
       
-      // Mock materials data for now
       const materials = [
         {
           id: 1,
@@ -140,13 +129,12 @@ const CourseDetail = () => {
         },
       ];
       
-      // Construct course details object
       const courseDetails: CourseDetailsType = {
         id: courseData.id,
         title: courseData.title,
         description: courseData.description,
         progress: progressData?.progress || 0,
-        instructor: "Alex Silva", // Hardcoded for now
+        instructor: "Alex Silva",
         category: courseData.category,
         image: courseData.image,
         modules: processedModules,
@@ -157,7 +145,6 @@ const CourseDetail = () => {
       setTotalLessons(lessonsCount);
       setCompletedLessons(completedCount);
       
-      // Set active video to first unlocked lesson if none is selected
       if (!activeVideo && processedModules.length > 0 && processedModules[0].lessons.length > 0) {
         const firstLesson = processedModules[0].lessons[0];
         if (!firstLesson.locked) {

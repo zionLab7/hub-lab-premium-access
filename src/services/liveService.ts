@@ -40,7 +40,7 @@ export const liveService = {
     try {
       const { data, error } = await supabase
         .from('lives')
-        .insert({
+        .insert([{
           title: liveData.title,
           description: liveData.description,
           date: liveData.date,
@@ -48,7 +48,7 @@ export const liveService = {
           image: liveData.image,
           link: liveData.link,
           is_past: liveData.is_past
-        })
+        }])
         .select()
         .single();
 
